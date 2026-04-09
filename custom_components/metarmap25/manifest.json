@@ -1,0 +1,13 @@
+{
+  "domain": "metarmap25",
+  "name": "METARMap 2.5",
+  "version": "1.0.0",
+  "config_flow": true,
+  "dependencies": [],
+  "requirements": ["aiohttp>=3.0"],
+  "iot_class": "local_polling",
+  "documentation": "https://github.com/Birdheezy/METARMap2.5-ha",
+  "issue_tracker": "https://github.com/Birdheezy/METARMap2.5-ha/issues",
+  "codeowners": ["@Birdheezy"],
+  "integration_type": "device"
+}

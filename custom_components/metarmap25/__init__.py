@@ -13,7 +13,7 @@ from .const import DOMAIN, AIRPORTS_ENDPOINT, CONFIG_ENDPOINT, SCAN_INTERVAL_MIN
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = ["sensor", "binary_sensor", "number", "text"]
+PLATFORMS = ["sensor", "number", "text"]
 
 CARD_URL = "/metarmap25/metarmap25-card.js"
 CARD_PATH = Path(__file__).parent / "metarmap25-card.js"

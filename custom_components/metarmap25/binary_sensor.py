@@ -12,7 +12,7 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities,
 ) -> None:
-    coordinator: DataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: DataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]["airports"]
 
     entities = []
 

@@ -25,6 +25,7 @@ async def async_setup_entry(
 
     entities.append(METARMapStatusSensor(coordinator, entry))
     entities.append(METARMapLastUpdatedSensor(coordinator, entry))
+    entities.append(METARMapVersionSensor(coordinator, entry))
 
     async_add_entities(entities)
 
@@ -113,6 +114,22 @@ class METARMapStatusSensor(CoordinatorEntity, SensorEntity):
             "ifr_color": colors.get("ifr"),
             "lifr_color": colors.get("lifr"),
         }
+
+
+class METARMapVersionSensor(CoordinatorEntity, SensorEntity):
+    """Firmware version of the METARMap unit."""
+
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._attr_name = f"{entry.data['name']} Version"
+        self._attr_unique_id = f"metarmap_{entry.entry_id}_version"
+        self._attr_device_info = _device_info(entry)
+
+    @property
+    def native_value(self):
+        if not self.coordinator.data:
+            return None
+        return self.coordinator.data.get("version")
 
 
 class METARMapLastUpdatedSensor(CoordinatorEntity, SensorEntity):

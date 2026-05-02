@@ -194,12 +194,33 @@ class METARMapPapaSensor(CoordinatorEntity, SensorEntity):
     def available(self) -> bool:
         return self.coordinator.last_update_success and self._data().get("enabled", False)
 
+    @staticmethod
+    def _parse_dt(raw: str | None) -> datetime | None:
+        if not raw:
+            return None
+        raw = re.sub(r"(\.\d{6})\d+", r"\1", raw)
+        try:
+            return datetime.fromisoformat(raw)
+        except ValueError:
+            return None
+
     @property
     def native_value(self) -> str | None:
         d = self._data()
         if not d.get("enabled"):
             return None
-        return self._STATUS_LABELS.get(d.get("status", ""), d.get("status"))
+        status = d.get("status", "")
+        label = self._STATUS_LABELS.get(status, status)
+        if status == "enroute":
+            origin = d.get("origin") or ""
+            dest = d.get("dest") or ""
+            if origin and dest:
+                return f"{label} {origin} → {dest}"
+        elif status in ("at_airport", "layover", "reserve"):
+            airport = d.get("airport") or ""
+            if airport:
+                return f"{label} {airport}"
+        return label
 
     @property
     def icon(self) -> str:
@@ -215,8 +236,8 @@ class METARMapPapaSensor(CoordinatorEntity, SensorEntity):
             "airport":       d.get("airport"),
             "flight_number": d.get("flight_number"),
             "is_deadhead":   d.get("is_deadhead", False),
-            "arrives_at":    d.get("arrives_at"),
-            "departs_at":    d.get("departs_at"),
-            "trip_end":      d.get("trip_end"),
-            "last_sync":     d.get("last_sync"),
+            "arrives_at":    self._parse_dt(d.get("arrives_at")),
+            "departs_at":    self._parse_dt(d.get("departs_at")),
+            "trip_end":      self._parse_dt(d.get("trip_end")),
+            "last_sync":     self._parse_dt(d.get("last_sync")),
         }

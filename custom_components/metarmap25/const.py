@@ -1,4 +1,6 @@
 DOMAIN = "metarmap25"
 SCAN_INTERVAL_MINUTES = 5
+PAPA_SCAN_INTERVAL_SECONDS = 60
 AIRPORTS_ENDPOINT = "/api/airports"
 CONFIG_ENDPOINT = "/api/config"
+PAPA_ENDPOINT = "/api/papa/status"

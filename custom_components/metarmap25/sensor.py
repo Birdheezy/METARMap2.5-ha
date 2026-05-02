@@ -15,7 +15,8 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities,
 ) -> None:
-    coordinator: DataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]["airports"]
+    entry_data = hass.data[DOMAIN][entry.entry_id]
+    coordinator: DataUpdateCoordinator = entry_data["airports"]
 
     entities = []
 
@@ -26,6 +27,10 @@ async def async_setup_entry(
     entities.append(METARMapStatusSensor(coordinator, entry))
     entities.append(METARMapLastUpdatedSensor(coordinator, entry))
     entities.append(METARMapVersionSensor(coordinator, entry))
+
+    papa_coordinator = entry_data.get("papa")
+    if papa_coordinator is not None:
+        entities.append(METARMapPapaSensor(papa_coordinator, entry))
 
     async_add_entities(entities)
 
@@ -156,3 +161,62 @@ class METARMapLastUpdatedSensor(CoordinatorEntity, SensorEntity):
             return datetime.fromisoformat(raw)
         except ValueError:
             return None
+
+
+class METARMapPapaSensor(CoordinatorEntity, SensorEntity):
+    """Pilot Tracker state sensor — shows where dad is right now."""
+
+    _STATUS_LABELS = {
+        "none":       "Off Duty",
+        "enroute":    "Enroute",
+        "at_airport": "At Airport",
+        "layover":    "Layover",
+        "reserve":    "Reserve",
+    }
+
+    _STATUS_ICONS = {
+        "enroute":    "mdi:airplane",
+        "at_airport": "mdi:airplane-marker",
+        "layover":    "mdi:bed",
+        "reserve":    "mdi:phone-alert",
+    }
+
+    def __init__(self, coordinator: DataUpdateCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._attr_name = f"{entry.data['name']} Papa Status"
+        self._attr_unique_id = f"metarmap_{entry.entry_id}_papa_status"
+        self._attr_device_info = _device_info(entry)
+
+    def _data(self) -> dict:
+        return self.coordinator.data or {}
+
+    @property
+    def available(self) -> bool:
+        return self.coordinator.last_update_success and self._data().get("enabled", False)
+
+    @property
+    def native_value(self) -> str | None:
+        d = self._data()
+        if not d.get("enabled"):
+            return None
+        return self._STATUS_LABELS.get(d.get("status", ""), d.get("status"))
+
+    @property
+    def icon(self) -> str:
+        return self._STATUS_ICONS.get(self._data().get("status", ""), "mdi:home-account")
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        d = self._data()
+        return {
+            "raw_status":    d.get("status"),
+            "origin":        d.get("origin"),
+            "destination":   d.get("dest"),
+            "airport":       d.get("airport"),
+            "flight_number": d.get("flight_number"),
+            "is_deadhead":   d.get("is_deadhead", False),
+            "arrives_at":    d.get("arrives_at"),
+            "departs_at":    d.get("departs_at"),
+            "trip_end":      d.get("trip_end"),
+            "last_sync":     d.get("last_sync"),
+        }

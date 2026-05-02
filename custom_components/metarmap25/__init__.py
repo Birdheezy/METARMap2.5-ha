@@ -9,7 +9,7 @@ from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DOMAIN, AIRPORTS_ENDPOINT, CONFIG_ENDPOINT, SCAN_INTERVAL_MINUTES
+from .const import DOMAIN, AIRPORTS_ENDPOINT, CONFIG_ENDPOINT, PAPA_ENDPOINT, SCAN_INTERVAL_MINUTES, PAPA_SCAN_INTERVAL_SECONDS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,6 +34,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     pi_ip = entry.data["pi_ip"].rstrip("/")
     airports_url = pi_ip + AIRPORTS_ENDPOINT
     config_url = pi_ip + CONFIG_ENDPOINT
+    papa_url = pi_ip + PAPA_ENDPOINT
 
     async def _fetch_airports():
         try:
@@ -57,6 +58,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except aiohttp.ClientError as exc:
             raise UpdateFailed(f"connection error: {exc}") from exc
 
+    async def _fetch_papa():
+        try:
+            timeout = aiohttp.ClientTimeout(total=10)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(papa_url) as resp:
+                    if resp.status != 200:
+                        raise UpdateFailed(f"HTTP {resp.status}")
+                    return await resp.json()
+        except aiohttp.ClientError as exc:
+            raise UpdateFailed(f"connection error: {exc}") from exc
+
     airports_coordinator = DataUpdateCoordinator(
         hass,
         _LOGGER,
@@ -73,12 +85,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=timedelta(minutes=SCAN_INTERVAL_MINUTES),
     )
 
+    papa_coordinator = DataUpdateCoordinator(
+        hass,
+        _LOGGER,
+        name=f"metarmap25_papa_{entry.entry_id}",
+        update_method=_fetch_papa,
+        update_interval=timedelta(seconds=PAPA_SCAN_INTERVAL_SECONDS),
+    )
+
     await airports_coordinator.async_config_entry_first_refresh()
     await config_coordinator.async_config_entry_first_refresh()
+    # Papa is optional — don't block setup if the Pi doesn't have papa enabled.
+    try:
+        await papa_coordinator.async_config_entry_first_refresh()
+    except Exception:
+        _LOGGER.debug("metarmap25: papa status not available on first refresh (papa may be disabled)")
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "airports": airports_coordinator,
         "config": config_coordinator,
+        "papa": papa_coordinator,
         "pi_ip": pi_ip,
     }
 

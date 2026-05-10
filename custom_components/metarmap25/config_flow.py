@@ -34,9 +34,9 @@ class METARMap25ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            pi_ip = user_input["pi_ip"].rstrip("/")
+            pi_ip = user_input["pi_ip"].strip().rstrip("/")
 
-            if not (pi_ip.startswith("http://") or pi_ip.startswith("https://")):
+            if not (pi_ip.lower().startswith("http://") or pi_ip.lower().startswith("https://")):
                 errors["pi_ip"] = "invalid_url"
             else:
                 try:
